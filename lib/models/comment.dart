@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Comment {
   final String id;
   final String ticketId;
@@ -16,22 +18,19 @@ class Comment {
   });
 
   factory Comment.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.parse(val);
+      return DateTime.now();
+    }
+
     return Comment(
-      id: json['id'],
-      ticketId: json['ticket_id'],
-      authorId: json['author_id'],
-      authorName: json['author_name'],
-      content: json['content'],
-      createdAt: DateTime.parse(json['created_at']),
+      id:         json['id'] ?? '',
+      ticketId:   json['ticketId'] ?? '',
+      authorId:   json['authorId'] ?? '',
+      authorName: json['authorName'] ?? '',
+      content:    json['content'] ?? '',
+      createdAt:  parseDate(json['createdAt']),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'ticket_id': ticketId,
-    'author_id': authorId,
-    'author_name': authorName,
-    'content': content,
-    'created_at': createdAt.toIso8601String(),
-  };
 }
