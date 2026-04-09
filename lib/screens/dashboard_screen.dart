@@ -26,7 +26,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Stream<QuerySnapshot> get _ticketsStream => _firestore
       .collection('tickets')
       .where('authorId', isEqualTo: _auth.currentUser?.uid)
-      .orderBy('createdAt', descending: true)
       .snapshots();
 
   String get _userName =>
@@ -71,22 +70,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return StreamBuilder<QuerySnapshot>(
       stream: _ticketsStream,
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Text(
+              'Error: ${snapshot.error}',
+              style: const TextStyle(color: AppTheme.priorityHigh),
+            ),
+          );
+        }
+
         final tickets = snapshot.hasData
             ? snapshot.data!.docs
-                .map((doc) => Ticket.fromJson(
-                    doc.data() as Map<String, dynamic>))
+                .map((doc) =>
+                    Ticket.fromJson(doc.data() as Map<String, dynamic>))
                 .toList()
             : <Ticket>[];
 
-        final countNew = tickets
-            .where((t) => t.status == 'new')
-            .length;
-        final countInProgress = tickets
-            .where((t) => t.status == 'in_progress')
-            .length;
-        final countResolved = tickets
-            .where((t) => t.status == 'resolved')
-            .length;
+        final countNew =
+            tickets.where((t) => t.status == 'new').length;
+        final countInProgress =
+            tickets.where((t) => t.status == 'in_progress').length;
+        final countResolved =
+            tickets.where((t) => t.status == 'resolved').length;
         final countTotal = tickets.length;
 
         return CustomScrollView(
@@ -122,7 +127,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ],
                         ),
-                        // Avatar
                         GestureDetector(
                           onTap: () => _showLogoutDialog(),
                           child: CircleAvatar(
@@ -191,7 +195,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
 
             // Tickets list
-            if (snapshot.connectionState == ConnectionState.waiting)
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                tickets.isEmpty)
               const SliverToBoxAdapter(
                 child: Center(
                   child: Padding(
@@ -241,7 +246,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(40),
         child: Column(
           children: [
-            Icon(
+            const Icon(
               Icons.inbox_outlined,
               size: 56,
               color: AppTheme.textHint,
