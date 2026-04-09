@@ -1,11 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class Ticket {
   final String id;
   final String title;
   final String description;
   final String category;
-  final String priority;   // 'low', 'medium', 'high'
-  final String status;     // 'new', 'in_progress', 'resolved', 'closed'
+  final String priority;
+  final String status;
   final String authorId;
+  final String authorName;
   final String? assignedTo;
   final List<String> attachments;
   final DateTime createdAt;
@@ -19,6 +22,7 @@ class Ticket {
     required this.priority,
     required this.status,
     required this.authorId,
+    required this.authorName,
     this.assignedTo,
     required this.attachments,
     required this.createdAt,
@@ -26,32 +30,25 @@ class Ticket {
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
+    DateTime parseDate(dynamic val) {
+      if (val is Timestamp) return val.toDate();
+      if (val is String) return DateTime.parse(val);
+      return DateTime.now();
+    }
+
     return Ticket(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      category: json['category'],
-      priority: json['priority'],
-      status: json['status'],
-      authorId: json['author_id'],
-      assignedTo: json['assigned_to'],
-      attachments: List<String>.from(json['attachments'] ?? []),
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      id:           json['id'] ?? '',
+      title:        json['title'] ?? '',
+      description:  json['description'] ?? '',
+      category:     json['category'] ?? '',
+      priority:     json['priority'] ?? 'medium',
+      status:       json['status'] ?? 'new',
+      authorId:     json['authorId'] ?? '',
+      authorName:   json['authorName'] ?? '',
+      assignedTo:   json['assignedTo'],
+      attachments:  List<String>.from(json['attachments'] ?? []),
+      createdAt:    parseDate(json['createdAt']),
+      updatedAt:    parseDate(json['updatedAt']),
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'title': title,
-    'description': description,
-    'category': category,
-    'priority': priority,
-    'status': status,
-    'author_id': authorId,
-    'assigned_to': assignedTo,
-    'attachments': attachments,
-    'created_at': createdAt.toIso8601String(),
-    'updated_at': updatedAt.toIso8601String(),
-  };
 }
