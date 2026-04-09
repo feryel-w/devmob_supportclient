@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../app_theme.dart';
+import '../services/auth_service.dart';
+import 'dashboard_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -14,6 +17,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _authService = AuthService();
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
   bool _isLoading = false;
@@ -32,19 +36,35 @@ class _SignupScreenState extends State<SignupScreen> {
 
     setState(() => _isLoading = true);
 
-    // Simulation temporaire — on branchera l'API plus tard
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      await _authService.signup(
+        name: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
 
-    setState(() => _isLoading = false);
+      if (!mounted) return;
 
-    if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      String message = 'Une erreur est survenue';
+      if (e.code == 'email-already-in-use') message = 'Cet e-mail est déjà utilisé';
+      if (e.code == 'weak-password') message = 'Mot de passe trop faible';
+      if (e.code == 'invalid-email') message = 'E-mail invalide';
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Compte créé avec succès !')),
-    );
-
-    // Retour au login
-    Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppTheme.priorityHigh,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -68,7 +88,6 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               const SizedBox(height: 16),
 
-              // Logo
               Container(
                 width: 70,
                 height: 70,
@@ -109,7 +128,6 @@ class _SignupScreenState extends State<SignupScreen> {
                 child: Column(
                   children: [
 
-                    // Nom complet
                     TextFormField(
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
@@ -130,7 +148,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Email
                     TextFormField(
                       controller: _emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -151,7 +168,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Mot de passe
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -181,7 +197,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     const SizedBox(height: 16),
 
-                    // Confirmer mot de passe
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirm,
@@ -211,7 +226,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     const SizedBox(height: 32),
 
-                    // Bouton créer compte
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -237,7 +251,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Lien retour login
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
