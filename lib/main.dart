@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'app_theme.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -14,11 +15,7 @@ class MyApp extends StatelessWidget {
       title: 'SupportClient',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const Scaffold(
-        body: Center(
-          child: Text('DEVMOB SupportClient ✓'),
-        ),
-      ),
+      home: const LoginScreen(),
     );
   }
 }
