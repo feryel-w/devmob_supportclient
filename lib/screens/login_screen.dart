@@ -4,6 +4,7 @@ import '../app_theme.dart';
 import '../services/auth_service.dart';
 import 'signup_screen.dart';
 import 'dashboard_screen.dart';
+import 'admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,32 +30,47 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
-    setState(() => _isLoading = true);
-    try {
-      await _authService.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+  if (!_formKey.currentState!.validate()) return;
+  setState(() => _isLoading = true);
+  try {
+    await _authService.login(
+      email: _emailController.text.trim(),
+      password: _passwordController.text,
+    );
+
+    if (!mounted) return;
+
+    // Vérifier le rôle
+    final uid = FirebaseAuth.instance.currentUser!.uid;
+    final role = await _authService.getUserRole(uid);
+
+    if (!mounted) return;
+
+    if (role == 'admin' || role == 'support') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
       );
-      if (!mounted) return;
+    } else {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const DashboardScreen()),
       );
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      String message = 'Une erreur est survenue';
-      if (e.code == 'user-not-found')    message = 'Aucun compte trouvé';
-      if (e.code == 'wrong-password')    message = 'Mot de passe incorrect';
-      if (e.code == 'invalid-email')     message = 'E-mail invalide';
-      if (e.code == 'too-many-requests') message = 'Trop de tentatives';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: AppTheme.priorityHigh),
-      );
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
+  } on FirebaseAuthException catch (e) {
+    if (!mounted) return;
+    String message = 'Une erreur est survenue';
+    if (e.code == 'user-not-found')    message = 'Aucun compte trouvé';
+    if (e.code == 'wrong-password')    message = 'Mot de passe incorrect';
+    if (e.code == 'invalid-email')     message = 'E-mail invalide';
+    if (e.code == 'too-many-requests') message = 'Trop de tentatives';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppTheme.priorityHigh),
+    );
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
+}
 
   Future<void> _handleForgotPassword() async {
     if (_emailController.text.isEmpty) {
