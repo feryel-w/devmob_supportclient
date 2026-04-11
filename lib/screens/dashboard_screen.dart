@@ -9,7 +9,7 @@ import 'login_screen.dart';
 import 'create_ticket_screen.dart';
 import 'ticket_detail_screen.dart';
 import 'faq_screen.dart';
-
+import 'profile_screen.dart';
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -307,13 +307,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isActive: _currentIndex == 2,
             onTap: () => setState(() => _currentIndex = 2),
           ),
-          _NavItem(
-            icon: Icons.person_outline,
-            activeIcon: Icons.person,
-            label: 'Profile',
-            isActive: _currentIndex == 3,
-            onTap: () => _showLogoutDialog(),
-          ),
+            _NavItem(
+              icon: Icons.person_outline,
+              activeIcon: Icons.person,
+              label: 'Profile',
+              isActive: _currentIndex == 3,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              ),
+            ),
         ],
       ),
     );
