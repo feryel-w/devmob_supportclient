@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../app_theme.dart';
 import '../models/ticket.dart';
 import '../models/comment.dart';
+import '../services/notification_service.dart';
 
 class TicketDetailScreen extends StatefulWidget {
   final Ticket ticket;
@@ -56,6 +57,11 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         'content':    text,
         'createdAt':  FieldValue.serverTimestamp(),
       });
+      await NotificationService().showNewReplyNotification(
+        ticketTitle: widget.ticket.title,
+        senderName: _auth.currentUser?.displayName ?? 'Support',
+        message: text,
+      );
 
       // Update ticket updatedAt
       await _firestore.collection('tickets').doc(widget.ticket.id).update({

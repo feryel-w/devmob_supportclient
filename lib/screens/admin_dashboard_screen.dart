@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import 'package:devmob_supportclient/screens/login_screen.dart';
 import 'statistics_screen.dart';
 import 'ticket_detail_screen.dart';
+import '../services/notification_service.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -95,6 +96,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'status':    newStatus,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await NotificationService().showStatusChangedNotification(
+      ticketTitle: ticket.title,
+      newStatus: newStatus,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
