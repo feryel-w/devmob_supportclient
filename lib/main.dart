@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'app_theme.dart';
-import 'screens/login_screen.dart';
+import 'screens/splash_screen.dart';
 import 'services/notification_service.dart';
 
 void main() async {
@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       title: 'SupportClient',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      home: const LoginScreen(),
+      home: const SplashScreen(),
     );
   }
 }
