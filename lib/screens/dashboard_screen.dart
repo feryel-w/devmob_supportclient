@@ -10,6 +10,8 @@ import 'create_ticket_screen.dart';
 import 'ticket_detail_screen.dart';
 import 'faq_screen.dart';
 import 'profile_screen.dart';
+import 'ticket_list_screen.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -47,12 +49,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: _currentIndex == 0
             ? _buildHome()
-            : _currentIndex == 2
-                ? const FaqScreen()
-                : _buildHome(),
+            : _currentIndex == 1
+                ? const TicketListScreen()
+                : _currentIndex == 2
+                    ? const FaqScreen()
+                    : _buildHome(),
       ),
       bottomNavigationBar: _buildBottomNav(),
-      floatingActionButton: _currentIndex == 0 || _currentIndex == 1
+      floatingActionButton: _currentIndex == 0
           ? FloatingActionButton(
               backgroundColor: AppTheme.primary,
               onPressed: () => Navigator.push(
@@ -245,14 +249,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Padding(
         padding: const EdgeInsets.all(40),
         child: Column(
-          children: [
-            const Icon(
+          children: const [
+            Icon(
               Icons.inbox_outlined,
               size: 56,
               color: AppTheme.textHint,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 16),
+            Text(
               'No tickets yet',
               style: TextStyle(
                 fontSize: 16,
@@ -260,8 +264,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: AppTheme.textSecondary,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               'Tap + to create your first ticket',
               style: TextStyle(
                 fontSize: 13,
@@ -307,16 +311,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isActive: _currentIndex == 2,
             onTap: () => setState(() => _currentIndex = 2),
           ),
-            _NavItem(
-              icon: Icons.person_outline,
-              activeIcon: Icons.person,
-              label: 'Profile',
-              isActive: _currentIndex == 3,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
-              ),
+          _NavItem(
+            icon: Icons.person_outline,
+            activeIcon: Icons.person,
+            label: 'Profile',
+            isActive: _currentIndex == 3,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
             ),
+          ),
         ],
       ),
     );
