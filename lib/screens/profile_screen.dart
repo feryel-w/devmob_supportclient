@@ -207,8 +207,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     .doc(user?.uid)
                     .get(),
                 builder: (context, snap) {
-                  final role =
-                      snap.data?.get('role') as String? ?? 'client';
+                final data = snap.data?.data() as Map<String, dynamic>?;
+                final role = data?['role'] as String? ?? 'client';
                   return Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12, vertical: 4),
