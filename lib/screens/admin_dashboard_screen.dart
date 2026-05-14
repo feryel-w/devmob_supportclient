@@ -9,6 +9,7 @@ import '../services/notification_service.dart';
 import 'login_screen.dart';
 import 'ticket_detail_screen.dart';
 import 'statistics_screen.dart';
+import 'user_management_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -206,8 +207,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color:
-                          isCurrent ? color : AppTheme.surfaceBorder,
+                      color: isCurrent ? color : AppTheme.surfaceBorder,
                     ),
                   ),
                   child: Row(
@@ -284,8 +284,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child:
-            _currentIndex == 0 ? _buildPanel() : const StatisticsScreen(),
+        child: _currentIndex == 0
+            ? _buildPanel()
+            : const StatisticsScreen(),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
@@ -334,23 +335,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     ],
                   ),
-                  GestureDetector(
-                    onTap: _showLogoutDialog,
-                    child: CircleAvatar(
-                      radius: 20,
-                      backgroundColor: AppTheme.statusResolved,
-                      child: Text(
-                        _auth.currentUser?.displayName
-                                ?.substring(0, 2)
-                                .toUpperCase() ??
-                            'SM',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                  Row(
+                    children: [
+                      // Users management button
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const UserManagementScreen()),
+                        ),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                                color: AppTheme.surfaceBorder),
+                          ),
+                          child: const Icon(
+                            Icons.people_outline,
+                            color: AppTheme.primaryLight,
+                            size: 20,
+                          ),
                         ),
                       ),
-                    ),
+                      // Avatar
+                      GestureDetector(
+                        onTap: _showLogoutDialog,
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: AppTheme.statusResolved,
+                          child: Text(
+                            _auth.currentUser?.displayName
+                                    ?.substring(0, 2)
+                                    .toUpperCase() ??
+                                'SM',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -364,8 +395,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   children: _filters.map((f) {
                     final isActive = _selectedFilter == f['value'];
                     return GestureDetector(
-                      onTap: () =>
-                          setState(() => _selectedFilter = f['value']!),
+                      onTap: () => setState(
+                          () => _selectedFilter = f['value']!),
                       child: Container(
                         margin: const EdgeInsets.only(right: 8),
                         padding: const EdgeInsets.symmetric(
@@ -402,7 +433,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               // User + Date filters row
               Row(
                 children: [
-                  // User dropdown
                   Expanded(
                     child: Container(
                       height: 38,
@@ -411,8 +441,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.surface,
                         borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: AppTheme.surfaceBorder),
+                        border: Border.all(
+                            color: AppTheme.surfaceBorder),
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
@@ -446,7 +476,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                   const SizedBox(width: 8),
 
-                  // Date range picker
                   GestureDetector(
                     onTap: _pickDateRange,
                     child: Container(
@@ -546,8 +575,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: StreamBuilder<QuerySnapshot>(
             stream: _ticketsStream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState ==
-                      ConnectionState.waiting &&
+              if (snapshot.connectionState == ConnectionState.waiting &&
                   !snapshot.hasData) {
                 return const Center(
                   child: CircularProgressIndicator(
@@ -591,13 +619,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               }
 
               return ListView.builder(
-                padding:
-                    const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
                 itemCount: tickets.length,
                 itemBuilder: (context, index) {
                   final ticket = tickets[index];
-                  final barColor =
-                      _getPriorityBarColor(ticket.priority);
+                  final barColor = _getPriorityBarColor(ticket.priority);
                   final isAssigned = ticket.assignedTo != null;
 
                   return GestureDetector(
@@ -620,20 +646,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                       child: Row(
                         children: [
-                          // Priority bar
                           Container(
                             width: 5,
                             height: 44,
                             decoration: BoxDecoration(
                               color: barColor,
-                              borderRadius:
-                                  BorderRadius.circular(3),
+                              borderRadius: BorderRadius.circular(3),
                             ),
                           ),
 
                           const SizedBox(width: 12),
 
-                          // Content
                           Expanded(
                             child: Column(
                               crossAxisAlignment:
@@ -663,7 +686,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
                           const SizedBox(width: 8),
 
-                          // Action buttons
                           Column(
                             children: [
                               GestureDetector(
@@ -671,10 +693,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     ? null
                                     : () => _assignTicket(ticket),
                                 child: Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(
                                     color: isAssigned
                                         ? AppTheme.statusResolved
@@ -685,9 +705,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    isAssigned
-                                        ? 'Assigned'
-                                        : 'Assign',
+                                    isAssigned ? 'Assigned' : 'Assign',
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
@@ -702,13 +720,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               const SizedBox(height: 4),
 
                               GestureDetector(
-                                onTap: () =>
-                                    _showStatusMenu(ticket),
+                                onTap: () => _showStatusMenu(ticket),
                                 child: Container(
-                                  padding:
-                                      const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10, vertical: 5),
                                   decoration: BoxDecoration(
                                     color: AppTheme.getStatusColor(
                                             ticket.status)
@@ -722,9 +737,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
-                                      color:
-                                          AppTheme.getStatusColor(
-                                              ticket.status),
+                                      color: AppTheme.getStatusColor(
+                                          ticket.status),
                                     ),
                                   ),
                                 ),
@@ -749,8 +763,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       height: 60,
       decoration: const BoxDecoration(
         color: Color(0xFF14161E),
-        border:
-            Border(top: BorderSide(color: AppTheme.surfaceBorder)),
+        border: Border(top: BorderSide(color: AppTheme.surfaceBorder)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -806,9 +819,7 @@ class _NavItem extends StatelessWidget {
         children: [
           Icon(
             isActive ? activeIcon : icon,
-            color: isActive
-                ? AppTheme.primaryLight
-                : AppTheme.textHint,
+            color: isActive ? AppTheme.primaryLight : AppTheme.textHint,
             size: 22,
           ),
           const SizedBox(height: 4),
@@ -816,9 +827,7 @@ class _NavItem extends StatelessWidget {
             label,
             style: TextStyle(
               fontSize: 9,
-              color: isActive
-                  ? AppTheme.primaryLight
-                  : AppTheme.textHint,
+              color: isActive ? AppTheme.primaryLight : AppTheme.textHint,
             ),
           ),
         ],
