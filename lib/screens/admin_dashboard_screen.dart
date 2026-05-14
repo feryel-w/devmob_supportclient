@@ -1,14 +1,14 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../app_theme.dart';
 import '../models/ticket.dart';
 import '../services/auth_service.dart';
-import 'package:devmob_supportclient/screens/login_screen.dart';
-import 'statistics_screen.dart';
-import 'ticket_detail_screen.dart';
 import '../services/notification_service.dart';
+import 'login_screen.dart';
+import 'ticket_detail_screen.dart';
+import 'statistics_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -26,19 +26,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentIndex = 0;
   String _selectedFilter = 'all';
   String _searchQuery = '';
+  String _selectedUser = 'all';
+  DateTime? _dateFrom;
+  DateTime? _dateTo;
+  List<String> _userNames = [];
 
   final List<Map<String, String>> _filters = [
-    {'value': 'all',        'label': 'All'},
-    {'value': 'new',        'label': 'New'},
-    {'value': 'in_progress','label': 'In progress'},
-    {'value': 'high',       'label': 'High priority'},
-    {'value': 'technical',  'label': 'Technical'},
+    {'value': 'all',         'label': 'All'},
+    {'value': 'new',         'label': 'New'},
+    {'value': 'in_progress', 'label': 'In progress'},
+    {'value': 'high',        'label': 'High priority'},
+    {'value': 'technical',   'label': 'Technical'},
   ];
 
   Stream<QuerySnapshot> get _ticketsStream => _firestore
       .collection('tickets')
       .orderBy('createdAt', descending: true)
       .snapshots();
+
+  void _loadUserNames(List<Ticket> tickets) {
+    final names = tickets.map((t) => t.authorName).toSet().toList();
+    if (!listEquals(_userNames, names)) {
+      setState(() => _userNames = names);
+    }
+  }
 
   List<Ticket> _applyFilters(List<Ticket> tickets) {
     return tickets.where((t) {
@@ -51,15 +62,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           t.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           t.authorName.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      return matchesFilter && matchesSearch;
+      final matchesUser =
+          _selectedUser == 'all' || t.authorName == _selectedUser;
+
+      final matchesDate =
+          (_dateFrom == null || t.createdAt.isAfter(_dateFrom!)) &&
+              (_dateTo == null ||
+                  t.createdAt
+                      .isBefore(_dateTo!.add(const Duration(days: 1))));
+
+      return matchesFilter && matchesSearch && matchesUser && matchesDate;
     }).toList();
   }
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24)   return '${diff.inHours}h ago';
-    if (diff.inDays < 7)     return '${diff.inDays}d ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
     return '${(diff.inDays / 7).floor()}w ago';
   }
 
@@ -72,6 +92,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _pickDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2024),
+      lastDate: DateTime.now(),
+      initialDateRange: _dateFrom != null && _dateTo != null
+          ? DateTimeRange(start: _dateFrom!, end: _dateTo!)
+          : null,
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppTheme.primary,
+              surface: AppTheme.surface,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dateFrom = picked.start;
+        _dateTo = picked.end;
+      });
+    }
+  }
+
   Future<void> _assignTicket(Ticket ticket) async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -81,6 +130,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'status':     'in_progress',
       'updatedAt':  FieldValue.serverTimestamp(),
     });
+
+    await NotificationService().showTicketAssignedNotification(
+      ticketTitle: ticket.title,
+      agentName: user.displayName ?? 'Support',
+    );
 
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -96,14 +150,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       'status':    newStatus,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+
     await NotificationService().showStatusChangedNotification(
       ticketTitle: ticket.title,
       newStatus: newStatus,
     );
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Status updated to ${AppTheme.getStatusLabel(newStatus)}'),
+        content: Text(
+            'Status updated to ${AppTheme.getStatusLabel(newStatus)}'),
         backgroundColor: AppTheme.getStatusColor(newStatus),
       ),
     );
@@ -149,7 +206,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: isCurrent ? color : AppTheme.surfaceBorder,
+                      color:
+                          isCurrent ? color : AppTheme.surfaceBorder,
                     ),
                   ),
                   child: Row(
@@ -226,7 +284,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: _currentIndex == 0 ? _buildPanel() : const StatisticsScreen(),
+        child:
+            _currentIndex == 0 ? _buildPanel() : const StatisticsScreen(),
       ),
       bottomNavigationBar: _buildBottomNav(),
     );
@@ -296,7 +355,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
               // Filter chips
               SingleChildScrollView(
@@ -338,7 +397,117 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
+
+              // User + Date filters row
+              Row(
+                children: [
+                  // User dropdown
+                  Expanded(
+                    child: Container(
+                      height: 38,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: AppTheme.surfaceBorder),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedUser,
+                          dropdownColor: AppTheme.surface,
+                          iconEnabledColor: AppTheme.textHint,
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 12,
+                          ),
+                          isExpanded: true,
+                          items: [
+                            const DropdownMenuItem(
+                              value: 'all',
+                              child: Text('All users',
+                                  style: TextStyle(
+                                      color: AppTheme.textHint)),
+                            ),
+                            ..._userNames.map((name) =>
+                                DropdownMenuItem(
+                                  value: name,
+                                  child: Text(name),
+                                )),
+                          ],
+                          onChanged: (val) => setState(
+                              () => _selectedUser = val ?? 'all'),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 8),
+
+                  // Date range picker
+                  GestureDetector(
+                    onTap: _pickDateRange,
+                    child: Container(
+                      height: 38,
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: _dateFrom != null
+                            ? AppTheme.primary.withOpacity(0.12)
+                            : AppTheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: _dateFrom != null
+                              ? AppTheme.primary
+                              : AppTheme.surfaceBorder,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 14,
+                            color: _dateFrom != null
+                                ? AppTheme.primaryLight
+                                : AppTheme.textHint,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _dateFrom != null
+                                ? '${_dateFrom!.day}/${_dateFrom!.month} - ${_dateTo!.day}/${_dateTo!.month}'
+                                : 'Date range',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: _dateFrom != null
+                                  ? AppTheme.primaryLight
+                                  : AppTheme.textHint,
+                            ),
+                          ),
+                          if (_dateFrom != null) ...[
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () => setState(() {
+                                _dateFrom = null;
+                                _dateTo = null;
+                              }),
+                              child: const Icon(
+                                Icons.close,
+                                size: 14,
+                                color: AppTheme.textHint,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
 
               // Search bar
               Container(
@@ -354,14 +523,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       color: AppTheme.textPrimary, fontSize: 12),
                   decoration: const InputDecoration(
                     hintText: 'Search tickets...',
-                    hintStyle:
-                        TextStyle(color: AppTheme.textHint, fontSize: 12),
+                    hintStyle: TextStyle(
+                        color: AppTheme.textHint, fontSize: 12),
                     prefixIcon: Icon(Icons.search,
                         color: AppTheme.textHint, size: 18),
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 12),
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 12),
                   ),
-                  onChanged: (val) => setState(() => _searchQuery = val),
+                  onChanged: (val) =>
+                      setState(() => _searchQuery = val),
                 ),
               ),
 
@@ -375,18 +546,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: StreamBuilder<QuerySnapshot>(
             stream: _ticketsStream,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting &&
+              if (snapshot.connectionState ==
+                      ConnectionState.waiting &&
                   !snapshot.hasData) {
                 return const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primary),
+                  child: CircularProgressIndicator(
+                      color: AppTheme.primary),
                 );
               }
 
               if (snapshot.hasError) {
                 return Center(
                   child: Text('Error: ${snapshot.error}',
-                      style:
-                          const TextStyle(color: AppTheme.priorityHigh)),
+                      style: const TextStyle(
+                          color: AppTheme.priorityHigh)),
                 );
               }
 
@@ -395,6 +568,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           doc.data() as Map<String, dynamic>))
                       .toList() ??
                   [];
+
+              _loadUserNames(allTickets);
 
               final tickets = _applyFilters(allTickets);
 
@@ -416,7 +591,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               }
 
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
+                padding:
+                    const EdgeInsets.fromLTRB(16, 0, 16, 80),
                 itemCount: tickets.length,
                 itemBuilder: (context, index) {
                   final ticket = tickets[index];
@@ -439,8 +615,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       decoration: BoxDecoration(
                         color: AppTheme.surface,
                         borderRadius: BorderRadius.circular(12),
-                        border:
-                            Border.all(color: AppTheme.surfaceBorder),
+                        border: Border.all(
+                            color: AppTheme.surfaceBorder),
                       ),
                       child: Row(
                         children: [
@@ -450,7 +626,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             height: 44,
                             decoration: BoxDecoration(
                               color: barColor,
-                              borderRadius: BorderRadius.circular(3),
+                              borderRadius:
+                                  BorderRadius.circular(3),
                             ),
                           ),
 
@@ -494,8 +671,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     ? null
                                     : () => _assignTicket(ticket),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5),
                                   decoration: BoxDecoration(
                                     color: isAssigned
                                         ? AppTheme.statusResolved
@@ -506,7 +685,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                         BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    isAssigned ? 'Assigned' : 'Assign',
+                                    isAssigned
+                                        ? 'Assigned'
+                                        : 'Assign',
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
@@ -521,10 +702,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               const SizedBox(height: 4),
 
                               GestureDetector(
-                                onTap: () => _showStatusMenu(ticket),
+                                onTap: () =>
+                                    _showStatusMenu(ticket),
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 10, vertical: 5),
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5),
                                   decoration: BoxDecoration(
                                     color: AppTheme.getStatusColor(
                                             ticket.status)
@@ -538,8 +722,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                     style: TextStyle(
                                       fontSize: 9,
                                       fontWeight: FontWeight.w600,
-                                      color: AppTheme.getStatusColor(
-                                          ticket.status),
+                                      color:
+                                          AppTheme.getStatusColor(
+                                              ticket.status),
                                     ),
                                   ),
                                 ),
@@ -564,7 +749,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       height: 60,
       decoration: const BoxDecoration(
         color: Color(0xFF14161E),
-        border: Border(top: BorderSide(color: AppTheme.surfaceBorder)),
+        border:
+            Border(top: BorderSide(color: AppTheme.surfaceBorder)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -620,8 +806,9 @@ class _NavItem extends StatelessWidget {
         children: [
           Icon(
             isActive ? activeIcon : icon,
-            color:
-                isActive ? AppTheme.primaryLight : AppTheme.textHint,
+            color: isActive
+                ? AppTheme.primaryLight
+                : AppTheme.textHint,
             size: 22,
           ),
           const SizedBox(height: 4),
