@@ -85,8 +85,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         final tickets = snapshot.hasData
             ? snapshot.data!.docs
-                .map((doc) =>
-                    Ticket.fromJson(doc.data() as Map<String, dynamic>))
+                .map((doc) => Ticket.fromJson(
+                    doc.data() as Map<String, dynamic>))
                 .toList()
             : <Ticket>[];
 
@@ -106,7 +106,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -151,7 +150,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                     const SizedBox(height: 20),
 
-                    // Stat cards
                     Row(
                       children: [
                         _StatCard(
@@ -198,7 +196,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
 
-            // Tickets list
             if (snapshot.connectionState == ConnectionState.waiting &&
                 tickets.isEmpty)
               const SliverToBoxAdapter(
@@ -212,9 +209,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               )
             else if (tickets.isEmpty)
-              SliverToBoxAdapter(
-                child: _buildEmptyState(),
-              )
+              SliverToBoxAdapter(child: _buildEmptyState())
             else
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
@@ -250,11 +245,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         padding: const EdgeInsets.all(40),
         child: Column(
           children: const [
-            Icon(
-              Icons.inbox_outlined,
-              size: 56,
-              color: AppTheme.textHint,
-            ),
+            Icon(Icons.inbox_outlined, size: 56, color: AppTheme.textHint),
             SizedBox(height: 16),
             Text(
               'No tickets yet',
@@ -267,10 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             SizedBox(height: 8),
             Text(
               'Tap + to create your first ticket',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.textHint,
-              ),
+              style: TextStyle(fontSize: 13, color: AppTheme.textHint),
             ),
           ],
         ),
@@ -283,9 +271,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       height: 60,
       decoration: const BoxDecoration(
         color: Color(0xFF14161E),
-        border: Border(
-          top: BorderSide(color: AppTheme.surfaceBorder),
-        ),
+        border: Border(top: BorderSide(color: AppTheme.surfaceBorder)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -297,12 +283,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
             isActive: _currentIndex == 0,
             onTap: () => setState(() => _currentIndex = 0),
           ),
-          _NavItem(
-            icon: Icons.confirmation_number_outlined,
-            activeIcon: Icons.confirmation_number,
-            label: 'Tickets',
-            isActive: _currentIndex == 1,
-            onTap: () => setState(() => _currentIndex = 1),
+          // Tickets with badge
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                .collection('tickets')
+                .where('authorId', isEqualTo: _auth.currentUser?.uid)
+                .where('status', isEqualTo: 'in_progress')
+                .snapshots(),
+            builder: (context, snap) {
+              final count = snap.data?.docs.length ?? 0;
+              return _NavItemBadge(
+                icon: Icons.confirmation_number_outlined,
+                activeIcon: Icons.confirmation_number,
+                label: 'Tickets',
+                isActive: _currentIndex == 1,
+                badgeCount: count,
+                onTap: () => setState(() => _currentIndex = 1),
+              );
+            },
           ),
           _NavItem(
             icon: Icons.help_outline,
@@ -332,8 +330,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+            borderRadius: BorderRadius.circular(14)),
         title: const Text(
           'Se déconnecter ?',
           style: TextStyle(color: AppTheme.textPrimary),
@@ -341,10 +338,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Annuler',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
+            child: const Text('Annuler',
+                style: TextStyle(color: AppTheme.textSecondary)),
           ),
           TextButton(
             onPressed: () async {
@@ -356,10 +351,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
             },
-            child: const Text(
-              'Déconnecter',
-              style: TextStyle(color: AppTheme.priorityHigh),
-            ),
+            child: const Text('Déconnecter',
+                style: TextStyle(color: AppTheme.priorityHigh)),
           ),
         ],
       ),
@@ -453,6 +446,83 @@ class _NavItem extends StatelessWidget {
             style: TextStyle(
               fontSize: 9,
               color: isActive ? AppTheme.primaryLight : AppTheme.textHint,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NavItemBadge extends StatelessWidget {
+  final IconData icon;
+  final IconData activeIcon;
+  final String label;
+  final bool isActive;
+  final int badgeCount;
+  final VoidCallback onTap;
+
+  const _NavItemBadge({
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.isActive,
+    required this.badgeCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                color: isActive
+                    ? AppTheme.primaryLight
+                    : AppTheme.textHint,
+                size: 22,
+              ),
+              if (badgeCount > 0)
+                Positioned(
+                  top: -6,
+                  right: -8,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.priorityHigh,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      badgeCount > 9 ? '9+' : '$badgeCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 9,
+              color: isActive
+                  ? AppTheme.primaryLight
+                  : AppTheme.textHint,
             ),
           ),
         ],
